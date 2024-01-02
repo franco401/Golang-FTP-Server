@@ -28,7 +28,7 @@ func HandleConnection(c net.Conn) {
 	* we want just the data of the exact size
 	 */
 	receivedData := string(buffer[:length])
-	fmt.Println("Client picked: ", receivedData)
+	fmt.Println("Client picked:", receivedData)
 }
 
 func main() {
