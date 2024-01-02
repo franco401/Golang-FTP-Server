@@ -17,11 +17,14 @@ func main() {
 	}
 
 	//show client message after connecting
-	fmt.Println("Successfully connected to server.")
+	fmt.Println("Successfully connected to server.\n")
 
-	data := []byte("Hello world!")
-	fmt.Println("Sending data: ", string(data))
+	//give client options to pick
+	var option string
+	fmt.Println("Select option:\n vf = view files\ne = exit\n")
+	//read option from user
+	fmt.Scan(&option)
 
-	//send data to server
-	conn.Write(data)
+	//send client option to server
+	conn.Write([]byte(option))
 }
