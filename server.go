@@ -4,8 +4,28 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 )
+
+func GetFileNames() string {
+	//read files from this directory
+	files, err := os.ReadDir(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var filenames string
+	/*
+	* loop through each file in the directory
+	* and append their names to the filenames variable
+	 */
+	for _, file := range files {
+		filename := file.Name()
+		filenames += filename + "\n"
+	}
+	return filenames
+}
 
 func HandleConnection(c net.Conn) {
 	fmt.Println(c.LocalAddr().String(), "successfully connected to server!")
@@ -23,12 +43,18 @@ func HandleConnection(c net.Conn) {
 	* and length is the length of the received
 	* byte array
 	*
-	* receivedData is the byte array from the client
+	* command is the byte array from the client
 	* received but only up to length bytes since
 	* we want just the data of the exact size
 	 */
-	receivedData := string(buffer[:length])
-	fmt.Println("Client picked:", receivedData)
+	command := string(buffer[:length])
+
+	//simply show what the client picked
+	fmt.Printf("Client picked the %s command", command)
+	if command == "vf" {
+		//send names of files in this directory to client
+		c.Write([]byte(GetFileNames()))
+	}
 }
 
 func main() {

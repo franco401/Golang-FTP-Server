@@ -40,6 +40,22 @@ func main() {
 			break
 		}
 	}
-	//send client option to server only if it's a valid one
-	conn.Write([]byte(option))
+
+	if option != "e" {
+		//send client option to server only if it's a valid one
+		conn.Write([]byte(option))
+
+		//receive file names from server directory
+		buffer := make([]byte, 1024)
+		length, err := conn.Read(buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
+		//read file names from server
+		files := string(buffer[:length])
+		fmt.Println("Files on server:\n", files)
+	} else {
+		//close connection if client chose to exit
+		conn.Close()
+	}
 }
