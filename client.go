@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 )
 
@@ -20,40 +21,68 @@ func main() {
 	fmt.Println("Successfully connected to server.\n")
 
 	//command options a client can pick
-	options := make(map[string]int8)
-	options["vf"] = 1
-	options["e"] = 1
+	commands := make(map[string]int8)
+	commands["vf"] = 1
+	commands["e"] = 1
 
 	/*
 	* continuously loop the program until the client
 	* selects a valid command
 	 */
-	var option string
+	var command string
 	for {
 		fmt.Println("Select option:\nvf = view files\ne = exit\n")
-		//read option from user
-		fmt.Scan(&option)
+		//read command from user
+		fmt.Scan(&command)
 
-		if options[option] != 1 {
-			fmt.Printf("'%s' is not a valid command.\n", option)
+		if commands[command] != 1 {
+			fmt.Printf("'%s' is not a valid command.\n", command)
 		} else {
 			break
 		}
 	}
 
-	if option != "e" {
+	if command != "e" {
 		//send client option to server only if it's a valid one
-		conn.Write([]byte(option))
+		conn.Write([]byte(command))
 
-		//receive file names from server directory
-		buffer := make([]byte, 1024)
+		//receive file names from server (10 KB limit)
+		buffer := make([]byte, 10240)
 		length, err := conn.Read(buffer)
 		if err != nil {
 			log.Fatal(err)
 		}
-		//read file names from server
+
+		//read files from server
 		files := string(buffer[:length])
-		fmt.Println("Files on server:\n" + files)
+		fmt.Println("Files on server:\n\n" + files)
+
+		//client enters file they wish to download
+		var filename string
+		fmt.Println("Pick a file to download:")
+		fmt.Scan(&filename)
+
+		//send filename to server to download
+		conn.Write([]byte(filename))
+
+		//receive file data from server (700 MB limit)
+		file_buffer_limit := 1048576 * 700
+		file_buffer := make([]byte, file_buffer_limit)
+		length, err = conn.Read(file_buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if length < file_buffer_limit {
+			//download file
+			err = os.WriteFile(filename, file_buffer[:length], 0644)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Downloaded file successfully.")
+		} else {
+			fmt.Println("File is too large to download.")
+		}
+
 	} else {
 		//close connection if client chooses to exit
 		fmt.Println("Successfully left the server.")

@@ -8,9 +8,10 @@ import (
 	"strconv"
 )
 
+// returns a message showing the size of a file
 func GetFileSize(filename string) string {
 	//read file
-	file, err := os.Open(filename)
+	file, err := os.Open("./files/" + filename)
 	//close file at the end of current file goroutine
 	defer file.Close()
 
@@ -27,7 +28,7 @@ func GetFileSize(filename string) string {
 	fs := f.Size()
 	var filesize float64 = float64(fs)
 
-	filesizes := []string{"KB", "MB", "GB"}
+	filesizes := []string{"B", "KB", "MB", "GB"}
 	var filesize_index int8
 
 	/*
@@ -45,9 +46,10 @@ func GetFileSize(filename string) string {
 	return fmt.Sprintln(filesize, filesizes[filesize_index])
 }
 
+// returns the name and size of a file
 func GetFileData() string {
 	//read files from this directory
-	files, err := os.ReadDir(".")
+	files, err := os.ReadDir("./files/")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,6 +71,22 @@ func GetFileData() string {
 		}
 	}
 	return filedata
+}
+
+// reads a given filename and sends it to client
+func SendFileData(filename string, c net.Conn) {
+	//open file
+	data, err := os.ReadFile("./files/" + filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//send file data to client
+	_, err = c.Write(data)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("File successfully sent.")
+	}
 }
 
 func HandleConnection(c net.Conn) {
@@ -94,10 +112,21 @@ func HandleConnection(c net.Conn) {
 	command := string(buffer[:length])
 
 	//simply show what the client picked
-	fmt.Printf("Client picked the %s command", command)
+	fmt.Printf("Client picked the %s command\n", command)
 	if command == "vf" {
 		//send names of files in this directory to client
 		c.Write([]byte(GetFileData()))
+
+		//buffer to store data coming from client
+		buffer := make([]byte, 255)
+
+		//read filename sent from client
+		length, err := c.Read(buffer)
+		if err != nil {
+			log.Fatal(err)
+		}
+		//read the given filename and send its data to client
+		SendFileData(string(buffer[:length]), c)
 	}
 }
 
