@@ -53,7 +53,7 @@ func main() {
 		}
 		//read file names from server
 		files := string(buffer[:length])
-		fmt.Println("Files on server:\n", files)
+		fmt.Println("Files on server:\n" + files)
 	} else {
 		//close connection if client chooses to exit
 		fmt.Println("Successfully left the server.")
