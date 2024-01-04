@@ -35,7 +35,7 @@ func main() {
 		fmt.Scan(&option)
 
 		if options[option] != 1 {
-			fmt.Println("Invalid command.\n")
+			fmt.Printf("'%s' is not a valid command.\n", option)
 		} else {
 			break
 		}
@@ -55,7 +55,8 @@ func main() {
 		files := string(buffer[:length])
 		fmt.Println("Files on server:\n", files)
 	} else {
-		//close connection if client chose to exit
+		//close connection if client chooses to exit
+		fmt.Println("Successfully left the server.")
 		conn.Close()
 	}
 }
