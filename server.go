@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -16,12 +15,12 @@ func GetFileSize(filename string) string {
 	defer file.Close()
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 	f, err := file.Stat()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 	//file size in bytes
@@ -51,7 +50,7 @@ func GetFileData() string {
 	//read files from this directory
 	files, err := os.ReadDir("./files/")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 	//shows client info for the files they want to view
@@ -92,7 +91,7 @@ func SendFileData(filename string, c net.Conn) {
 		//send file data to client
 		_, err = c.Write(data)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		} else {
 			fmt.Println("File successfully sent.")
 		}
@@ -107,7 +106,7 @@ func HandleConnection(c net.Conn) {
 	//read data sent from client
 	length, err := c.Read(buffer)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	/*
 	* buffer is a byte array
@@ -121,8 +120,6 @@ func HandleConnection(c net.Conn) {
 	 */
 	command := string(buffer[:length])
 
-	//simply show what the client picked
-	fmt.Printf("Client picked the %s command\n", command)
 	if command == "vf" {
 		//send names of files in this directory to client
 		c.Write([]byte(GetFileData()))
@@ -133,7 +130,7 @@ func HandleConnection(c net.Conn) {
 		//read filename sent from client
 		length, err := c.Read(buffer)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 
 		//read the given filename and send its data to client
@@ -149,14 +146,14 @@ func main() {
 	//run server on localhost
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 	//accept client connections
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 		//goroutine to handle incoming client connections
 		go HandleConnection(conn)

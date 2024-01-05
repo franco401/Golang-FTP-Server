@@ -5,18 +5,13 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 )
 
-func main() {
-	port := 8080
-
-	//attempt to connect to tcp server
-	conn, err := net.Dial("tcp", ":"+strconv.Itoa(port))
-	if err != nil {
-		log.Fatal(err)
-	}
-
+/*
+* client side functionality while communicating with
+* the server
+ */
+func ConnectToServer(conn net.Conn) {
 	//show client message after connecting
 	fmt.Println("Successfully connected to server.\n")
 
@@ -92,5 +87,28 @@ func main() {
 		//close connection if client chooses to exit
 		fmt.Println("Successfully left the server.")
 		conn.Close()
+	}
+}
+
+func main() {
+	//user can enter ip address and port of server
+	var address, port string
+
+	fmt.Println("Enter ip address:")
+	fmt.Scan(&address)
+
+	fmt.Println("Enter port:")
+	fmt.Scan(&port)
+
+	//put the ip and port together
+	server_address := address + ":" + port
+
+	//attempt to connect to tcp server
+	conn, err := net.Dial("tcp", server_address)
+	if err != nil {
+		fmt.Println("Couldn't connect to address:", server_address)
+	} else {
+		//only connect if ip and port are valid
+		ConnectToServer(conn)
 	}
 }
