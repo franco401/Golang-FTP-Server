@@ -120,7 +120,9 @@ func HandleConnection(c net.Conn) {
 	 */
 	command := string(buffer[:length])
 
-	if command == "vf" {
+	switch command {
+	//when client picks view files command
+	case "vf":
 		//send names of files in this directory to client
 		c.Write([]byte(GetFileData()))
 
@@ -132,9 +134,12 @@ func HandleConnection(c net.Conn) {
 		if err != nil {
 			fmt.Println(err)
 		}
-
 		//read the given filename and send its data to client
 		SendFileData(string(buffer[:length]), c)
+
+	//when client picks upload file command
+	case "uf":
+		fmt.Println("uf")
 	}
 }
 
