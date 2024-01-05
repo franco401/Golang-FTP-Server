@@ -43,7 +43,7 @@ func main() {
 	}
 
 	if command != "e" {
-		//send client option to server only if it's a valid one
+		//send client command to server only if it's a valid one
 		conn.Write([]byte(command))
 
 		//receive file names from server (10 KB limit)
@@ -65,22 +65,27 @@ func main() {
 		//send filename to server to download
 		conn.Write([]byte(filename))
 
-		//receive file data from server (700 MB limit)
-		file_buffer_limit := 1048576 * 700
+		//receive file data from server (50 MB limit)
+		file_buffer_limit := 1048576 * 50
 		file_buffer := make([]byte, file_buffer_limit)
 		length, err = conn.Read(file_buffer)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if length < file_buffer_limit {
-			//download file
+		/*
+		* if the server returns an error when reading
+		* a given file, show it to the client
+		 */
+
+		if string(file_buffer[:length]) == "error" {
+			fmt.Printf("Couldn't find file: %s\n", filename)
+		} else {
+			//else download file
 			err = os.WriteFile(filename, file_buffer[:length], 0644)
 			if err != nil {
 				log.Fatal(err)
 			}
 			fmt.Println("Downloaded file successfully.")
-		} else {
-			fmt.Println("File is too large to download.")
 		}
 
 	} else {

@@ -77,22 +77,32 @@ func GetFileData() string {
 func SendFileData(filename string, c net.Conn) {
 	//open file
 	data, err := os.ReadFile("./files/" + filename)
+
+	//delete later
+	fmt.Println("Filename:", filename)
+
 	if err != nil {
-		log.Fatal(err)
-	}
-	//send file data to client
-	_, err = c.Write(data)
-	if err != nil {
-		log.Fatal(err)
+		/*
+		* when a given file can't be read or
+		* doesn't exist on the server, send
+		* the client the string "error"
+		 */
+		c.Write([]byte("error"))
 	} else {
-		fmt.Println("File successfully sent.")
+		//send file data to client
+		_, err = c.Write(data)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			fmt.Println("File successfully sent.")
+		}
 	}
 }
 
 func HandleConnection(c net.Conn) {
 	fmt.Println(c.LocalAddr().String(), "successfully connected to server!")
-	//buffer to store data coming from client
-	buffer := make([]byte, 255)
+	//buffer to store command coming from client
+	buffer := make([]byte, 10)
 
 	//read data sent from client
 	length, err := c.Read(buffer)
@@ -100,7 +110,7 @@ func HandleConnection(c net.Conn) {
 		log.Fatal(err)
 	}
 	/*
-	* buffer is a 255 byte long array
+	* buffer is a byte array
 	* that will receive data from a client
 	* and length is the length of the received
 	* byte array
@@ -117,7 +127,7 @@ func HandleConnection(c net.Conn) {
 		//send names of files in this directory to client
 		c.Write([]byte(GetFileData()))
 
-		//buffer to store data coming from client
+		//buffer to store file name from client
 		buffer := make([]byte, 255)
 
 		//read filename sent from client
@@ -125,6 +135,7 @@ func HandleConnection(c net.Conn) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		//read the given filename and send its data to client
 		SendFileData(string(buffer[:length]), c)
 	}
