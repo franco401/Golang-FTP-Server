@@ -111,12 +111,47 @@ func SendFileData(c net.Conn) {
 	}
 }
 
+// receives a file uploaded by a client
+func ReceiveFileData(c net.Conn) {
+	/*
+	* receive filename from client (255 character)
+	* after they type in the "uf" command
+	 */
+	filename_limit := 255
+	filename_buffer := make([]byte, filename_limit)
+	length, err := c.Read(filename_buffer)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	filename := string(filename_buffer[:length])
+
+	//receive file data from client (50 MB limit)
+	file_buffer_limit := 1048576 * 50
+	file_buffer := make([]byte, file_buffer_limit)
+	length, err = c.Read(file_buffer)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		//upload file
+		err = os.WriteFile("./files/"+filename, file_buffer[:length], 0644)
+		if err != nil {
+			fmt.Println(err)
+			//send client error message
+			c.Write([]byte("File upload error."))
+		} else {
+			//send client sucesss message
+			c.Write([]byte("File uploaded successfully."))
+		}
+	}
+}
+
 func HandleConnection(c net.Conn) {
 	fmt.Println(c.LocalAddr().String(), "successfully connected to server!")
 	//buffer to store command coming from client
 	buffer := make([]byte, 10)
 
-	//read data sent from client
+	//read command sent from client
 	length, err := c.Read(buffer)
 	if err != nil {
 		fmt.Println(err)
@@ -145,7 +180,7 @@ func HandleConnection(c net.Conn) {
 
 	//when client picks upload file command
 	case "uf":
-		fmt.Println("uf")
+		ReceiveFileData(c)
 	}
 }
 

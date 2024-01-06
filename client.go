@@ -6,10 +6,12 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
-// when client picks view files command
+// called when client picks view files command
 func ViewFiles(command string, conn net.Conn) {
+	//send command to server
 	conn.Write([]byte(command))
 
 	//receive file names from server (10 KB limit)
@@ -62,9 +64,49 @@ func ViewFiles(command string, conn net.Conn) {
 	}
 }
 
-// will be updated in later
+// called when client picks upload file command
 func UploadFile(command string, conn net.Conn) {
-	fmt.Println(command)
+	//send command to server
+	conn.Write([]byte(command))
+
+	//read filename
+	var filename string
+	filename_reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter name of file in this folder to upload: ")
+	filename, _ = filename_reader.ReadString('\n')
+
+	//remove two newline characters
+	filename = string(filename[:len(filename)-2])
+
+	//try to open (local) file
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		//close connection if local file can't be read
+		fmt.Println(err)
+		conn.Close()
+	} else {
+		//send name of file to server
+		conn.Write([]byte(filename))
+
+		/*
+		* give the server some time to read file data
+		* after receiving filename
+		 */
+		time.Sleep(time.Millisecond)
+
+		//send file data to server
+		conn.Write(data)
+
+		//receive message from server (255 characters)
+		message_limit := 255
+		message_buffer := make([]byte, message_limit)
+		length, err := conn.Read(message_buffer)
+		if err != nil {
+			fmt.Println(err)
+		}
+		message := string(message_buffer[:length])
+		fmt.Println("Message from server:", message)
+	}
 }
 
 /*
@@ -75,7 +117,7 @@ func ConnectToServer(conn net.Conn) {
 	//show client message after connecting
 	fmt.Println("Successfully connected to server.\n")
 
-	//command options a client can pick
+	//commands a client can pick
 	commands := make(map[string]int8)
 	commands["vf"] = 1
 	commands["uf"] = 1
@@ -88,13 +130,6 @@ func ConnectToServer(conn net.Conn) {
 	var command string
 	for {
 		fmt.Println("Commands:\n---------\nvf = view files\nuf = upload file\ne = exit\n")
-
-		/*
-			fmt.Print("Select command: ")
-			//read command from user
-			fmt.Scan(&command)
-		*/
-
 		command_reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Select command: ")
 		command, _ = command_reader.ReadString('\n')
@@ -120,9 +155,13 @@ func ConnectToServer(conn net.Conn) {
 
 	//when client picks exit command
 	case "e":
-		//close connection if client chooses to exit
-		fmt.Println("Successfully left the server.")
-		conn.Close()
+		err := conn.Close()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			//close connection if client chooses to exit
+			fmt.Println("Successfully left the server.")
+		}
 	}
 
 }
