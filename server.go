@@ -45,15 +45,15 @@ func GetFileSize(filename string) string {
 	return fmt.Sprintln(filesize, filesizes[filesize_index])
 }
 
-// returns the name and size of a file
-func GetFileData() string {
+// returns the name and size of all files on server to client
+func PrepareFileData() string {
 	//read files from this directory
 	files, err := os.ReadDir("./files/")
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	//shows client info for the files they want to view
+	//shows client info for the files on the server
 	filedata := "File Name | File Size\n---------------------\n"
 
 	/*
@@ -74,13 +74,16 @@ func GetFileData() string {
 
 // reads a given filename and sends it to client
 func SendFileData(c net.Conn) {
-	//send names of files in this directory to client
-	c.Write([]byte(GetFileData()))
+	/*
+	* send names of files and their sizes in this directory
+	* to client
+	 */
+	c.Write([]byte(PrepareFileData()))
 
 	//buffer to store file name from client
 	buffer := make([]byte, 255)
 
-	//read filename sent from client
+	//read filename sent from client they want to download
 	length, err := c.Read(buffer)
 	if err != nil {
 		fmt.Println(err)
@@ -133,7 +136,11 @@ func HandleConnection(c net.Conn) {
 	switch command {
 	//when client picks view files command
 	case "vf":
-		//read the given filename and send its data to client
+		/*
+		* handles both sending user names and sizes
+		* of all files on server and then sending
+		* a given file to the client they want to download
+		 */
 		SendFileData(c)
 
 	//when client picks upload file command
