@@ -73,13 +73,22 @@ func GetFileData() string {
 }
 
 // reads a given filename and sends it to client
-func SendFileData(filename string, c net.Conn) {
-	//open file
+func SendFileData(c net.Conn) {
+	//send names of files in this directory to client
+	c.Write([]byte(GetFileData()))
+
+	//buffer to store file name from client
+	buffer := make([]byte, 255)
+
+	//read filename sent from client
+	length, err := c.Read(buffer)
+	if err != nil {
+		fmt.Println(err)
+	}
+	filename := string(buffer[:length])
+
+	//try to open file
 	data, err := os.ReadFile("./files/" + filename)
-
-	//delete later
-	fmt.Println("Filename:", filename)
-
 	if err != nil {
 		/*
 		* when a given file can't be read or
@@ -89,6 +98,7 @@ func SendFileData(filename string, c net.Conn) {
 		c.Write([]byte("error"))
 	} else {
 		//send file data to client
+		fmt.Println("Sending file:", filename)
 		_, err = c.Write(data)
 		if err != nil {
 			fmt.Println(err)
@@ -123,19 +133,8 @@ func HandleConnection(c net.Conn) {
 	switch command {
 	//when client picks view files command
 	case "vf":
-		//send names of files in this directory to client
-		c.Write([]byte(GetFileData()))
-
-		//buffer to store file name from client
-		buffer := make([]byte, 255)
-
-		//read filename sent from client
-		length, err := c.Read(buffer)
-		if err != nil {
-			fmt.Println(err)
-		}
 		//read the given filename and send its data to client
-		SendFileData(string(buffer[:length]), c)
+		SendFileData(c)
 
 	//when client picks upload file command
 	case "uf":

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -18,14 +19,18 @@ func ViewFiles(command string, conn net.Conn) {
 		log.Fatal(err)
 	}
 
-	//read files from server
+	//get file names from server
 	files := string(buffer[:length])
 	fmt.Println("Files on server:\n\n" + files)
 
-	//client enters file they wish to download
+	//user input for filename to download
 	var filename string
-	fmt.Println("Pick a file to download:")
-	fmt.Scan(&filename)
+	filename_reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Pick a file to download: ")
+	filename, _ = filename_reader.ReadString('\n')
+
+	//remove two newline characters
+	filename = string(filename[:len(filename)-2])
 
 	//send filename to server to download
 	conn.Write([]byte(filename))
@@ -51,6 +56,9 @@ func ViewFiles(command string, conn net.Conn) {
 			log.Fatal(err)
 		}
 		fmt.Println("Downloaded file successfully.")
+		//since the program ends here for now, close connection
+		fmt.Println("Successfully left the server.")
+		conn.Close()
 	}
 }
 
@@ -79,12 +87,23 @@ func ConnectToServer(conn net.Conn) {
 	 */
 	var command string
 	for {
-		fmt.Println("Select option:\nvf = view files\nuf = upload file\ne = exit\n")
-		//read command from user
-		fmt.Scan(&command)
+		fmt.Println("Commands:\n---------\nvf = view files\nuf = upload file\ne = exit\n")
+
+		/*
+			fmt.Print("Select command: ")
+			//read command from user
+			fmt.Scan(&command)
+		*/
+
+		command_reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Select command: ")
+		command, _ = command_reader.ReadString('\n')
+
+		//remove two newline characters
+		command = string(command[:len(command)-2])
 
 		if commands[command] != 1 {
-			fmt.Printf("'%s' is not a valid command.\n", command)
+			fmt.Printf("'%s' is not a valid command.\n\n", command)
 		} else {
 			break
 		}
@@ -112,11 +131,19 @@ func main() {
 	//user can enter ip address and port of server
 	var address, port string
 
-	fmt.Println("Enter ip address:")
-	fmt.Scan(&address)
+	address_reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter ip address: ")
+	address, _ = address_reader.ReadString('\n')
 
-	fmt.Println("Enter port:")
-	fmt.Scan(&port)
+	//remove two newline characters
+	address = string(address[:len(address)-2])
+
+	port_reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter port: ")
+	port, _ = port_reader.ReadString('\n')
+
+	//remove two newline characters
+	port = string(port[:len(port)-2])
 
 	//put the ip and port together
 	server_address := address + ":" + port
