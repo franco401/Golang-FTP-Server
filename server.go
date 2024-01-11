@@ -115,6 +115,15 @@ func SendFileData(c net.Conn) {
 
 // receives a file uploaded by a client
 func ReceiveFileData(c net.Conn) {
+	//receive file data from client (50 MB limit)
+	fileBufferLimit := units.MB * 50
+
+	//convert file upload limit to string
+	fileBufferLimitAsString := fmt.Sprint(fileBufferLimit)
+
+	//send file upload limit to client
+	c.Write([]byte(fileBufferLimitAsString))
+
 	/*
 	* receive file name from client (255 character)
 	* after they type in the "uf" command
@@ -126,10 +135,9 @@ func ReceiveFileData(c net.Conn) {
 		fmt.Println(err)
 	}
 
+	//read file name client wants to upload
 	fileName := string(fileNameBuffer[:length])
 
-	//receive file data from client (50 MB limit)
-	fileBufferLimit := units.MB * 50
 	fileBuffer := make([]byte, fileBufferLimit)
 	length, err = c.Read(fileBuffer)
 	if err != nil {

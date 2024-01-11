@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 	"units"
 )
@@ -16,14 +17,14 @@ func ViewFiles(command string, conn net.Conn) {
 	conn.Write([]byte(command))
 
 	//receive file names from server (10 KB limit)
-	buffer := make([]byte, units.KB*10)
-	length, err := conn.Read(buffer)
+	fileNamesBuffer := make([]byte, units.KB*10)
+	length, err := conn.Read(fileNamesBuffer)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//get file names from server
-	files := string(buffer[:length])
+	files := string(fileNamesBuffer[:length])
 	fmt.Println("Files on server:\n\n" + files)
 
 	//read name of file to download
@@ -40,6 +41,7 @@ func ViewFiles(command string, conn net.Conn) {
 
 	//receive file data from server (50 MB limit)
 	fileBufferLimit := units.MB * 50
+
 	fileBuffer := make([]byte, fileBufferLimit)
 	length, err = conn.Read(fileBuffer)
 	if err != nil {
@@ -65,10 +67,47 @@ func ViewFiles(command string, conn net.Conn) {
 	}
 }
 
+func ShowFileSize(fileSize int64) string {
+	fileSizes := []string{"B", "KB", "MB", "GB"}
+	var fileSizeIndex int8
+
+	/*
+	* while the filesize in bytes
+	* is bigger than 1024, continously
+	* divide by 1024 and increment the
+	* filesizeIndex to finally return
+	* the appropriate file size for the
+	* client, such as 1 KB for 1024 bytes
+	 */
+	for fileSize >= 1024.0 {
+		fileSizeIndex++
+		fileSize /= 1024.0
+	}
+	return fmt.Sprintln(fileSize, fileSizes[fileSizeIndex])
+}
+
 // called when client picks upload file command
 func UploadFile(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
+
+	//receive file upload limit of server in bytes (up to unsigned 64 bit limit)
+	buffer := make([]byte, 20)
+	length, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//file upload limit from server, converted from byte to string to int64
+	fileUploadLimit, err := strconv.ParseInt(string(buffer[:length]), 10, 64)
+
+	//parse error
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//show it to the client
+	fmt.Printf("File upload limit: %s\n\n", ShowFileSize(fileUploadLimit))
 
 	//read file name
 	var fileName string
@@ -86,27 +125,33 @@ func UploadFile(command string, conn net.Conn) {
 		fmt.Println(err)
 		conn.Close()
 	} else {
-		//send name of file to server
-		conn.Write([]byte(fileName))
+		//check if the chosen file is wihin the file upload limit
+		if int64(len(data)) > fileUploadLimit {
+			fmt.Printf("This file is too large: %s", ShowFileSize(int64(len(data))))
+			conn.Close()
+		} else {
+			//send name of file to server
+			conn.Write([]byte(fileName))
 
-		/*
-		* give the server some time to read file data
-		* after receiving file name
-		 */
-		time.Sleep(time.Millisecond)
+			/*
+			* give the server some time to read file data
+			* after receiving file name
+			 */
+			time.Sleep(time.Millisecond)
 
-		//send file data to server
-		conn.Write(data)
+			//send file data to server
+			conn.Write(data)
 
-		//receive message from server (255 characters)
-		messageLimit := 255
-		messageBuffer := make([]byte, messageLimit)
-		length, err := conn.Read(messageBuffer)
-		if err != nil {
-			fmt.Println(err)
+			//receive message from server (255 characters)
+			messageLimit := 255
+			messageBuffer := make([]byte, messageLimit)
+			length, err := conn.Read(messageBuffer)
+			if err != nil {
+				fmt.Println(err)
+			}
+			message := string(messageBuffer[:length])
+			fmt.Println("Message from server:", message)
 		}
-		message := string(messageBuffer[:length])
-		fmt.Println("Message from server:", message)
 	}
 }
 
