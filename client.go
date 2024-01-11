@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"units"
 )
 
 // called when client picks view files command
@@ -15,7 +16,7 @@ func ViewFiles(command string, conn net.Conn) {
 	conn.Write([]byte(command))
 
 	//receive file names from server (10 KB limit)
-	buffer := make([]byte, 10240)
+	buffer := make([]byte, units.KB*10)
 	length, err := conn.Read(buffer)
 	if err != nil {
 		log.Fatal(err)
@@ -38,7 +39,7 @@ func ViewFiles(command string, conn net.Conn) {
 	conn.Write([]byte(filename))
 
 	//receive file data from server (50 MB limit)
-	file_buffer_limit := 1048576 * 50
+	file_buffer_limit := units.MB * 50
 	file_buffer := make([]byte, file_buffer_limit)
 	length, err = conn.Read(file_buffer)
 	if err != nil {
@@ -115,7 +116,7 @@ func UploadFile(command string, conn net.Conn) {
  */
 func ConnectToServer(conn net.Conn) {
 	//show client message after connecting
-	fmt.Println("Successfully connected to server.\n")
+	fmt.Printf("Successfully connected to server.\n\n")
 
 	//commands a client can pick
 	commands := make(map[string]int8)
@@ -129,7 +130,7 @@ func ConnectToServer(conn net.Conn) {
 	 */
 	var command string
 	for {
-		fmt.Println("Commands:\n---------\nvf = view files\nuf = upload file\ne = exit\n")
+		fmt.Printf("Commands:\n---------\nvf = view files\nuf = upload file\ne = exit\n\n")
 		command_reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Select command: ")
 		command, _ = command_reader.ReadString('\n')

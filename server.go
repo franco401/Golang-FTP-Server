@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"units"
 )
 
 // returns a message showing the size of a file
@@ -127,7 +128,7 @@ func ReceiveFileData(c net.Conn) {
 	filename := string(filename_buffer[:length])
 
 	//receive file data from client (50 MB limit)
-	file_buffer_limit := 1048576 * 50
+	file_buffer_limit := units.MB * 50
 	file_buffer := make([]byte, file_buffer_limit)
 	length, err = c.Read(file_buffer)
 	if err != nil {
