@@ -9,9 +9,9 @@ import (
 )
 
 // returns a message showing the size of a file
-func GetFileSize(filename string) string {
+func GetFileSize(fileName string) string {
 	//read file
-	file, err := os.Open("./files/" + filename)
+	file, err := os.Open("./files/" + fileName)
 	//close file at the end of current file goroutine
 	defer file.Close()
 
@@ -20,30 +20,31 @@ func GetFileSize(filename string) string {
 	}
 
 	f, err := file.Stat()
+
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	//file size in bytes
 	fs := f.Size()
-	var filesize float64 = float64(fs)
+	var fileSize float64 = float64(fs)
 
-	filesizes := []string{"B", "KB", "MB", "GB"}
-	var filesize_index int8
+	fileSizes := []string{"B", "KB", "MB", "GB"}
+	var fileSizeIndex int8
 
 	/*
 	* while the filesize in bytes
 	* is bigger than 1024, continously
 	* divide by 1024 and increment the
-	* filesize_index to finally return
+	* filesizeIndex to finally return
 	* the appropriate file size for the
 	* client, such as 1 KB for 1024 bytes
 	 */
-	for filesize >= 1024.0 {
-		filesize_index++
-		filesize /= 1024.0
+	for fileSize >= 1024.0 {
+		fileSizeIndex++
+		fileSize /= 1024.0
 	}
-	return fmt.Sprintln(filesize, filesizes[filesize_index])
+	return fmt.Sprintln(fileSize, fileSizes[fileSizeIndex])
 }
 
 // returns the name and size of all files on server to client
@@ -55,25 +56,25 @@ func PrepareFileData() string {
 	}
 
 	//shows client info for the files on the server
-	filedata := "File Name | File Size\n---------------------\n"
+	fileData := "File Name | File Size\n---------------------\n"
 
 	/*
 	* loop through each file in the directory
-	* and append their names to the filenames variable
+	* and append their names to the file names variable
 	 */
 
 	for _, file := range files {
 		//only get data for files, not directories
 		if !file.Type().IsDir() {
-			filename := file.Name()
-			filesize := GetFileSize(filename)
-			filedata += fmt.Sprintln(filename, "|", filesize)
+			fileName := file.Name()
+			fileSize := GetFileSize(fileName)
+			fileData += fmt.Sprintln(fileName, "|", fileSize)
 		}
 	}
-	return filedata
+	return fileData
 }
 
-// reads a given filename and sends it to client
+// reads a given file name and sends it to client
 func SendFileData(c net.Conn) {
 	/*
 	* send names of files and their sizes in this directory
@@ -84,15 +85,15 @@ func SendFileData(c net.Conn) {
 	//buffer to store file name from client
 	buffer := make([]byte, 255)
 
-	//read filename sent from client they want to download
+	//read file name sent from client they want to download
 	length, err := c.Read(buffer)
 	if err != nil {
 		fmt.Println(err)
 	}
-	filename := string(buffer[:length])
+	fileName := string(buffer[:length])
 
 	//try to open file
-	data, err := os.ReadFile("./files/" + filename)
+	data, err := os.ReadFile("./files/" + fileName)
 	if err != nil {
 		/*
 		* when a given file can't be read or
@@ -102,7 +103,7 @@ func SendFileData(c net.Conn) {
 		c.Write([]byte("error"))
 	} else {
 		//send file data to client
-		fmt.Println("Sending file:", filename)
+		fmt.Println("Sending file:", fileName)
 		_, err = c.Write(data)
 		if err != nil {
 			fmt.Println(err)
@@ -115,27 +116,27 @@ func SendFileData(c net.Conn) {
 // receives a file uploaded by a client
 func ReceiveFileData(c net.Conn) {
 	/*
-	* receive filename from client (255 character)
+	* receive file name from client (255 character)
 	* after they type in the "uf" command
 	 */
-	filename_limit := 255
-	filename_buffer := make([]byte, filename_limit)
-	length, err := c.Read(filename_buffer)
+	fileNameLimit := 255
+	fileNameBuffer := make([]byte, fileNameLimit)
+	length, err := c.Read(fileNameBuffer)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	filename := string(filename_buffer[:length])
+	fileName := string(fileNameBuffer[:length])
 
 	//receive file data from client (50 MB limit)
-	file_buffer_limit := units.MB * 50
-	file_buffer := make([]byte, file_buffer_limit)
-	length, err = c.Read(file_buffer)
+	fileBufferLimit := units.MB * 50
+	fileBuffer := make([]byte, fileBufferLimit)
+	length, err = c.Read(fileBuffer)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		//upload file
-		err = os.WriteFile("./files/"+filename, file_buffer[:length], 0644)
+		err = os.WriteFile("./files/"+fileName, fileBuffer[:length], 0644)
 		if err != nil {
 			fmt.Println(err)
 			//send client error message

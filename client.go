@@ -26,22 +26,22 @@ func ViewFiles(command string, conn net.Conn) {
 	files := string(buffer[:length])
 	fmt.Println("Files on server:\n\n" + files)
 
-	//user input for filename to download
-	var filename string
-	filename_reader := bufio.NewReader(os.Stdin)
+	//read name of file to download
+	var fileName string
+	fileNameReader := bufio.NewReader(os.Stdin)
 	fmt.Print("Pick a file to download: ")
-	filename, _ = filename_reader.ReadString('\n')
+	fileName, _ = fileNameReader.ReadString('\n')
 
 	//remove two newline characters
-	filename = string(filename[:len(filename)-2])
+	fileName = string(fileName[:len(fileName)-2])
 
-	//send filename to server to download
-	conn.Write([]byte(filename))
+	//send file name to server to download
+	conn.Write([]byte(fileName))
 
 	//receive file data from server (50 MB limit)
-	file_buffer_limit := units.MB * 50
-	file_buffer := make([]byte, file_buffer_limit)
-	length, err = conn.Read(file_buffer)
+	fileBufferLimit := units.MB * 50
+	fileBuffer := make([]byte, fileBufferLimit)
+	length, err = conn.Read(fileBuffer)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,11 +50,11 @@ func ViewFiles(command string, conn net.Conn) {
 	* a given file, show it to the client
 	 */
 
-	if string(file_buffer[:length]) == "error" {
-		fmt.Printf("Couldn't find file: %s\n", filename)
+	if string(fileBuffer[:length]) == "error" {
+		fmt.Printf("Couldn't find file: %s\n", fileName)
 	} else {
 		//else download file
-		err = os.WriteFile(filename, file_buffer[:length], 0644)
+		err = os.WriteFile(fileName, fileBuffer[:length], 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -70,28 +70,28 @@ func UploadFile(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
 
-	//read filename
-	var filename string
-	filename_reader := bufio.NewReader(os.Stdin)
+	//read file name
+	var fileName string
+	fileNameReader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter name of file in this folder to upload: ")
-	filename, _ = filename_reader.ReadString('\n')
+	fileName, _ = fileNameReader.ReadString('\n')
 
 	//remove two newline characters
-	filename = string(filename[:len(filename)-2])
+	fileName = string(fileName[:len(fileName)-2])
 
 	//try to open (local) file
-	data, err := os.ReadFile(filename)
+	data, err := os.ReadFile(fileName)
 	if err != nil {
 		//close connection if local file can't be read
 		fmt.Println(err)
 		conn.Close()
 	} else {
 		//send name of file to server
-		conn.Write([]byte(filename))
+		conn.Write([]byte(fileName))
 
 		/*
 		* give the server some time to read file data
-		* after receiving filename
+		* after receiving file name
 		 */
 		time.Sleep(time.Millisecond)
 
@@ -99,13 +99,13 @@ func UploadFile(command string, conn net.Conn) {
 		conn.Write(data)
 
 		//receive message from server (255 characters)
-		message_limit := 255
-		message_buffer := make([]byte, message_limit)
-		length, err := conn.Read(message_buffer)
+		messageLimit := 255
+		messageBuffer := make([]byte, messageLimit)
+		length, err := conn.Read(messageBuffer)
 		if err != nil {
 			fmt.Println(err)
 		}
-		message := string(message_buffer[:length])
+		message := string(messageBuffer[:length])
 		fmt.Println("Message from server:", message)
 	}
 }
@@ -131,9 +131,9 @@ func ConnectToServer(conn net.Conn) {
 	var command string
 	for {
 		fmt.Printf("Commands:\n---------\nvf = view files\nuf = upload file\ne = exit\n\n")
-		command_reader := bufio.NewReader(os.Stdin)
+		commandReader := bufio.NewReader(os.Stdin)
 		fmt.Print("Select command: ")
-		command, _ = command_reader.ReadString('\n')
+		command, _ = commandReader.ReadString('\n')
 
 		//remove two newline characters
 		command = string(command[:len(command)-2])
@@ -171,27 +171,27 @@ func main() {
 	//user can enter ip address and port of server
 	var address, port string
 
-	address_reader := bufio.NewReader(os.Stdin)
+	addressReader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter ip address: ")
-	address, _ = address_reader.ReadString('\n')
+	address, _ = addressReader.ReadString('\n')
 
 	//remove two newline characters
 	address = string(address[:len(address)-2])
 
-	port_reader := bufio.NewReader(os.Stdin)
+	portReader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter port: ")
-	port, _ = port_reader.ReadString('\n')
+	port, _ = portReader.ReadString('\n')
 
 	//remove two newline characters
 	port = string(port[:len(port)-2])
 
 	//put the ip and port together
-	server_address := address + ":" + port
+	serverAddress := address + ":" + port
 
 	//attempt to connect to tcp server
-	conn, err := net.Dial("tcp", server_address)
+	conn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
-		fmt.Println("Couldn't connect to address:", server_address)
+		fmt.Println("Couldn't connect to address:", serverAddress)
 	} else {
 		//only connect if ip and port are valid
 		ConnectToServer(conn)
