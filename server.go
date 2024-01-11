@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
-	s "strings"
 	"units"
 )
 
@@ -188,51 +186,16 @@ func HandleConnection(c net.Conn) {
 	}
 }
 
-var fileSizeLimit int = 0
-
 func main() {
 	//configure and start tcp server
 	port := 8080
-	fmt.Printf("Server running on port: %d\n\n", port)
+	fmt.Printf("Server running on port: %d\n", port)
 
 	//run server on localhost
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	//read input for file size
-	fileSizeReader := bufio.NewReader(os.Stdin)
-	fmt.Printf("File sizes:\n---------------\nKB = kilobytes\nMB = megabyes\nGB = gigabytes\n---------------\nEnter file size: ")
-	fileSize, _ := fileSizeReader.ReadString('\n')
-
-	//remove two newline characters
-	fileSize = string(fileSize[:len(fileSize)-2])
-
-	//capitalize file size input
-	fileSize = s.ToUpper(fileSize)
-
-	//read input for amount
-	amountReader := bufio.NewReader(os.Stdin)
-	fmt.Printf("How many %s do you want to limit to?: ", fileSize)
-	amountInput, _ := amountReader.ReadString('\n')
-
-	//remove two newline characters
-	amountInput = string(amountInput[:len(amountInput)-2])
-
-	//convert to int
-	amount, err := strconv.Atoi(amountInput)
-
-	switch fileSize {
-	case "KB":
-		fileSizeLimit = units.KB * amount
-	case "MB":
-		fileSizeLimit = units.MB * amount
-	case "GB":
-		fileSizeLimit = units.GB * amount
-	}
-
-	fmt.Printf("\nFile size limit: %d %s (%d bytes)\n", amount, fileSize, fileSizeLimit)
 
 	//accept client connections
 	for {

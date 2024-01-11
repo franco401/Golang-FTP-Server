@@ -167,8 +167,8 @@ func ConnectToServer(conn net.Conn) {
 
 }
 
-// user can enter ip address and port of server
-func InputIPAddress() string {
+func main() {
+	//user can enter ip address and port of server
 	var address, port string
 
 	addressReader := bufio.NewReader(os.Stdin)
@@ -186,11 +186,7 @@ func InputIPAddress() string {
 	port = string(port[:len(port)-2])
 
 	//put the ip and port together
-	return address + ":" + port
-}
-
-func main() {
-	serverAddress := InputIPAddress()
+	serverAddress := address + ":" + port
 
 	//attempt to connect to tcp server
 	conn, err := net.Dial("tcp", serverAddress)
