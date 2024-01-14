@@ -19,8 +19,8 @@ go build server.go
 1. Use config.json to configure the ip address and port for the server to host on (ip address and port currently default to "127.0.0.1" and "8080")
 2. Open the server
 3. Open the client and you will enter the ip address and then the port so you can connect to the server
-4. Upon successfully connecting, clients can enter commands to do things such as view files stored in the "files" folder, download a file from the "files" folder, upload a file to the "files" folder, or exiting the program
-5. If a file is too large to download from or upload to the server respectively, the server notifies the client about it
+4. Upon successfully connecting, clients can enter commands to do things such as view files stored in the "files" folder, download a file from the "files" folder, upload a file to the "files" folder, or exiting the server
+5. If a file is too large to download from or upload to the server respectively or some other kind of error, the client is notified about it and exits the server
 
 # Client commands
 * vf = view files (from server)
