@@ -54,6 +54,9 @@ func ViewFiles(command string, conn net.Conn) {
 
 	if string(fileBuffer[:length]) == "error" {
 		fmt.Printf("Couldn't find file: %s\n", fileName)
+		fmt.Println("Exiting server...")
+		time.Sleep(time.Second)
+		conn.Close()
 	} else {
 		//else download file
 		err = os.WriteFile(fileName, fileBuffer[:length], 0644)
@@ -61,8 +64,8 @@ func ViewFiles(command string, conn net.Conn) {
 			log.Fatal(err)
 		}
 		fmt.Println("Downloaded file successfully.")
-		//since the program ends here for now, close connection
-		fmt.Println("Successfully left the server.")
+		fmt.Println("Exiting server...")
+		time.Sleep(time.Second)
 		conn.Close()
 	}
 }
@@ -123,11 +126,15 @@ func UploadFile(command string, conn net.Conn) {
 	if err != nil {
 		//close connection if local file can't be read
 		fmt.Println(err)
+		fmt.Println("Exiting server...")
+		time.Sleep(time.Second)
 		conn.Close()
 	} else {
 		//check if the chosen file is wihin the file upload limit
 		if int64(len(data)) > fileUploadLimit {
 			fmt.Printf("This file is too large: %s", ShowFileSize(int64(len(data))))
+			fmt.Println("Exiting server...")
+			time.Sleep(time.Second)
 			conn.Close()
 		} else {
 			//send name of file to server
@@ -151,18 +158,15 @@ func UploadFile(command string, conn net.Conn) {
 			}
 			message := string(messageBuffer[:length])
 			fmt.Println("Message from server:", message)
+			fmt.Println("Exiting server...")
+			time.Sleep(time.Second)
+			conn.Close()
 		}
 	}
 }
 
-/*
-* client side functionality while communicating with
-* the server
- */
-func ConnectToServer(conn net.Conn) {
-	//show client message after connecting
-	fmt.Printf("Successfully connected to server.\n\n")
-
+// returns a (valid) command the client picks
+func CommandSelection() string {
 	//commands a client can pick
 	commands := make(map[string]int8)
 	commands["vf"] = 1
@@ -189,6 +193,18 @@ func ConnectToServer(conn net.Conn) {
 			break
 		}
 	}
+	return command
+}
+
+/*
+* client side functionality while communicating with
+* the server
+ */
+func ConnectToServer(conn net.Conn) {
+	//show client message after connecting
+	fmt.Printf("Successfully connected to server.\n\n")
+
+	command := CommandSelection()
 
 	switch command {
 	case "vf":
@@ -237,6 +253,9 @@ func main() {
 	conn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
 		fmt.Println("Couldn't connect to address:", serverAddress)
+		fmt.Println("Exiting server...")
+		time.Sleep(time.Second)
+		conn.Close()
 	} else {
 		//only connect if ip and port are valid
 		ConnectToServer(conn)
