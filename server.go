@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 	"units"
 )
 
@@ -195,12 +195,32 @@ func HandleConnection(c net.Conn) {
 }
 
 func main() {
-	//configure and start tcp server
-	port := 8080
-	fmt.Printf("Server running on port: %d\n", port)
+	//create json struct
+	type serverConfig struct {
+		IP_Address string `json:"ip_address"`
+		Port       string `json:"port"`
+	}
 
-	//run server on localhost
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	//read json file
+	data, err := os.ReadFile("config.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//use json struct
+	var server serverConfig
+
+	//and give it the values of the json file
+	err = json.Unmarshal(data, &server)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	serverAddreess := server.IP_Address + ":" + server.Port
+	fmt.Printf("Server running on address: %s\n", serverAddreess)
+
+	//run server from server config and start tcp server
+	listener, err := net.Listen("tcp", serverAddreess)
 	if err != nil {
 		fmt.Println(err)
 	}
