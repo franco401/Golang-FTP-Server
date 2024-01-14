@@ -83,14 +83,14 @@ func SendFileData(c net.Conn) {
 	c.Write([]byte(PrepareFileData()))
 
 	//buffer to store file name from client
-	buffer := make([]byte, 255)
+	fileNameBuffer := make([]byte, 255)
 
 	//read file name sent from client they want to download
-	length, err := c.Read(buffer)
+	length, err := c.Read(fileNameBuffer)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fileName := string(buffer[:length])
+	fileName := string(fileNameBuffer[:length])
 
 	//try to open file
 	data, err := os.ReadFile("./files/" + fileName)
@@ -159,15 +159,15 @@ func ReceiveFileData(c net.Conn) {
 func HandleConnection(c net.Conn) {
 	fmt.Println(c.LocalAddr().String(), "successfully connected to server!")
 	//buffer to store command coming from client
-	buffer := make([]byte, 10)
+	commandBuffer := make([]byte, 10)
 
 	//read command sent from client
-	length, err := c.Read(buffer)
+	length, err := c.Read(commandBuffer)
 	if err != nil {
 		fmt.Println(err)
 	}
 	/*
-	* buffer is a byte array
+	* commandBuffer is a byte array
 	* that will receive data from a client
 	* and length is the length of the received
 	* byte array
@@ -176,7 +176,7 @@ func HandleConnection(c net.Conn) {
 	* received but only up to length bytes since
 	* we want just the data of the exact size
 	 */
-	command := string(buffer[:length])
+	command := string(commandBuffer[:length])
 
 	switch command {
 	//when client picks view files command
