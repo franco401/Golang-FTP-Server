@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 )
 
 // create json struct
@@ -200,6 +201,8 @@ func main() {
 	data, err := os.ReadFile("config.json")
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println("Closing server...")
+		time.Sleep(time.Second)
 	}
 
 	//use json struct
@@ -209,6 +212,8 @@ func main() {
 	err = json.Unmarshal(data, &server)
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println("Closing server...")
+		time.Sleep(time.Second)
 	}
 
 	//set file buffer limit
@@ -221,6 +226,8 @@ func main() {
 	listener, err := net.Listen("tcp", serverAddress)
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println("Closing server...")
+		time.Sleep(time.Second)
 	}
 
 	fmt.Printf("Server running on: %s\n", serverAddress)
@@ -230,6 +237,8 @@ func main() {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
+			fmt.Println("Closing server...")
+			time.Sleep(time.Second)
 		}
 		//goroutine to handle incoming client connections
 		go HandleConnection(conn)
