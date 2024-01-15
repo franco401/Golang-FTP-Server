@@ -5,8 +5,16 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"units"
 )
+
+// create json struct
+type serverConfig struct {
+	IP_Address      string `json:"ip_address"`
+	Port            string `json:"port"`
+	FileBufferLimit int64  `json:"file_buffer_limit"`
+}
+
+var fileBufferLimit int64
 
 // returns a message showing the size of a file
 func GetFileSize(fileName string) string {
@@ -115,15 +123,6 @@ func SendFileData(c net.Conn) {
 
 // receives a file uploaded by a client
 func ReceiveFileData(c net.Conn) {
-	//receive file data from client (50 MB limit)
-	fileBufferLimit := units.MB * 50
-
-	//convert file upload limit to string
-	fileBufferLimitAsString := fmt.Sprint(fileBufferLimit)
-
-	//send file upload limit to client
-	c.Write([]byte(fileBufferLimitAsString))
-
 	/*
 	* receive file name from client (255 character)
 	* after they type in the "uf" command
@@ -138,6 +137,7 @@ func ReceiveFileData(c net.Conn) {
 	//read file name client wants to upload
 	fileName := string(fileNameBuffer[:length])
 
+	//data from file client wants to upload
 	fileBuffer := make([]byte, fileBufferLimit)
 	length, err = c.Read(fileBuffer)
 	if err != nil {
@@ -158,6 +158,7 @@ func ReceiveFileData(c net.Conn) {
 
 func HandleConnection(c net.Conn) {
 	fmt.Println(c.LocalAddr().String(), "successfully connected to server!")
+
 	//buffer to store command coming from client
 	commandBuffer := make([]byte, 10)
 
@@ -195,12 +196,6 @@ func HandleConnection(c net.Conn) {
 }
 
 func main() {
-	//create json struct
-	type serverConfig struct {
-		IP_Address string `json:"ip_address"`
-		Port       string `json:"port"`
-	}
-
 	//read json file
 	data, err := os.ReadFile("config.json")
 	if err != nil {
@@ -216,14 +211,19 @@ func main() {
 		fmt.Println(err)
 	}
 
-	serverAddreess := server.IP_Address + ":" + server.Port
-	fmt.Printf("Server running on address: %s\n", serverAddreess)
+	//set file buffer limit
+	fileBufferLimit = server.FileBufferLimit
+
+	//read ip address and port
+	serverAddress := server.IP_Address + ":" + server.Port
 
 	//run server from server config and start tcp server
-	listener, err := net.Listen("tcp", serverAddreess)
+	listener, err := net.Listen("tcp", serverAddress)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Printf("Server running on: %s\n", serverAddress)
 
 	//accept client connections
 	for {

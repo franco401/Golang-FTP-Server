@@ -2,14 +2,23 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"time"
 	"units"
 )
+
+// create json struct
+type serverConfig struct {
+	IP_Address      string `json:"ip_address"`
+	Port            string `json:"port"`
+	FileBufferLimit int64  `json:"file_buffer_limit"`
+}
+
+var fileBufferLimit int64
 
 // called when client picks view files command
 func ViewFiles(command string, conn net.Conn) {
@@ -27,6 +36,9 @@ func ViewFiles(command string, conn net.Conn) {
 	files := string(fileNamesBuffer[:length])
 	fmt.Println("Files on server:\n\n" + files)
 
+	//show client the file download limit from config.json (file buffer limit)
+	fmt.Printf("File download limit: %s\n", ShowFileSize(fileBufferLimit))
+
 	//read name of file to download
 	var fileName string
 	fileNameReader := bufio.NewReader(os.Stdin)
@@ -39,9 +51,10 @@ func ViewFiles(command string, conn net.Conn) {
 	//send file name to server to download
 	conn.Write([]byte(fileName))
 
-	//receive file data from server (50 MB limit)
-	fileBufferLimit := units.MB * 50
+	//file download limit (50 MB limit)
+	//fileBufferLimit := units.MB * 50
 
+	//receive file data from server to download
 	fileBuffer := make([]byte, fileBufferLimit)
 	length, err = conn.Read(fileBuffer)
 	if err != nil {
@@ -94,23 +107,8 @@ func UploadFile(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
 
-	//receive file upload limit of server in bytes (up to unsigned 64 bit limit)
-	buffer := make([]byte, 20)
-	length, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	//file upload limit from server, converted from byte to string to int64
-	fileUploadLimit, err := strconv.ParseInt(string(buffer[:length]), 10, 64)
-
-	//parse error
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	//show it to the client
-	fmt.Printf("File upload limit: %s\n\n", ShowFileSize(fileUploadLimit))
+	//show client the file upload limit from config.json (file buffer limit)
+	fmt.Printf("File upload limit: %s\n", ShowFileSize(fileBufferLimit))
 
 	//read file name
 	var fileName string
@@ -131,7 +129,7 @@ func UploadFile(command string, conn net.Conn) {
 		conn.Close()
 	} else {
 		//check if the chosen file is wihin the file upload limit
-		if int64(len(data)) > fileUploadLimit {
+		if int64(len(data)) > fileBufferLimit {
 			fmt.Printf("This file is too large: %s", ShowFileSize(int64(len(data))))
 			fmt.Println("Exiting server...")
 			time.Sleep(time.Second)
@@ -229,25 +227,26 @@ func ConnectToServer(conn net.Conn) {
 }
 
 func main() {
-	//user can enter ip address and port of server
-	var address, port string
+	//read json file
+	data, err := os.ReadFile("config.json")
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	addressReader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter ip address: ")
-	address, _ = addressReader.ReadString('\n')
+	//use json struct
+	var server serverConfig
 
-	//remove two newline characters
-	address = string(address[:len(address)-2])
+	//and give it the values of the json file
+	err = json.Unmarshal(data, &server)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	portReader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter port: ")
-	port, _ = portReader.ReadString('\n')
+	//set file buffer limit
+	fileBufferLimit = server.FileBufferLimit
 
-	//remove two newline characters
-	port = string(port[:len(port)-2])
-
-	//put the ip and port together
-	serverAddress := address + ":" + port
+	//read ip address and port
+	serverAddress := server.IP_Address + ":" + server.Port
 
 	//attempt to connect to tcp server
 	conn, err := net.Dial("tcp", serverAddress)
