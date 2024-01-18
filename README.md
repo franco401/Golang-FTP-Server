@@ -5,7 +5,7 @@ An FTP client/server project written in Golang using the built-in net library. C
 * This is the amount of bytes to download and receive for a file at a time. This is to enable memory efficient file transferring as only chunks of file data is in memory and sent instead of the entire file at once.
 
 # What is the file storage directory?
-* This is where clients can upload files to and where the server reads all file names and sizes to share with the client when they enter the "vf" command
+* This is where clients can upload files to and where the server reads all file names and sizes to share with the client when they enter the "vf" command. Currently defaults to "./files/" or the given files folder. To use a different folder, in config.json, change "file_storage_directory": "./files/" to "file_storage_directory": "./[your_folder_name]/"
 
 ## Installation Guide
 1. Download the source code
