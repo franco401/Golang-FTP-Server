@@ -13,12 +13,32 @@ import (
 
 // create json struct
 type serverConfig struct {
-	IP_Address      string `json:"ip_address"`
-	Port            string `json:"port"`
-	FileBufferLimit int64  `json:"file_buffer_limit"`
+	IP_Address        string `json:"ip_address"`
+	Port              string `json:"port"`
+	MaxFileBufferSize int64  `json:"max_file_buffer_size"`
 }
 
-var fileBufferLimit int64
+// max file buffer size to receive or upload
+var maxFileBufferSize int64
+
+// used to prepare a file to send to server
+func GetFileReader(fileName string) (*os.File, *bufio.Reader, error) {
+	//open file (doesn't take up memory)
+	file, err := os.Open(fileName)
+
+	//set opened file's data to reader buffer
+	reader := bufio.NewReader(file)
+	return file, reader, err
+}
+
+// used to make a new file for receiving (downloading)
+func MakeNewFile(fileName string) *os.File {
+	newFile, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println("File make error:", err)
+	}
+	return newFile
+}
 
 // called when client picks view files command
 func ViewFiles(command string, conn net.Conn) {
@@ -36,9 +56,6 @@ func ViewFiles(command string, conn net.Conn) {
 	files := string(fileNamesBuffer[:length])
 	fmt.Println("Files on server:\n\n" + files)
 
-	//show client the file download limit from config.json (file buffer limit)
-	fmt.Printf("File download limit: %s\n", ShowFileSize(fileBufferLimit))
-
 	//read name of file to download
 	var fileName string
 	fileNameReader := bufio.NewReader(os.Stdin)
@@ -51,35 +68,88 @@ func ViewFiles(command string, conn net.Conn) {
 	//send file name to server to download
 	conn.Write([]byte(fileName))
 
-	//file download limit (50 MB limit)
-	//fileBufferLimit := units.MB * 50
+	//make new file for file downloading
+	newFile := MakeNewFile(fileName)
 
-	//receive file data from server to download
-	fileBuffer := make([]byte, fileBufferLimit)
-	length, err = conn.Read(fileBuffer)
+	//close file at the end
+	defer newFile.Close()
+
+	//buffer for server msg to see if they can send a file
+	serverMessageBuffer := make([]byte, 255)
+
+	//see if the client found a file
+	length, err = conn.Read(serverMessageBuffer)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
-	/*
-	* if the server returns an error when reading
-	* a given file, show it to the client
-	 */
 
-	if string(fileBuffer[:length]) == "error" {
-		fmt.Printf("Couldn't find file: %s\n", fileName)
-		fmt.Println("Exiting server...")
-		time.Sleep(time.Second)
-		conn.Close()
+	//message from client to see if they can send a file
+	clientMessage := string(serverMessageBuffer[:length])
+
+	if clientMessage == "Can't read given file." {
+		fmt.Printf("Couldn't open the file: %s", fileName)
 	} else {
-		//else download file
-		err = os.WriteFile(fileName, fileBuffer[:length], 0644)
+		//receive file upload from client
+		DownloadFileChunks(conn, newFile, maxFileBufferSize)
+		fmt.Println("Received file upload from client.")
+	}
+
+	/*
+
+		//make new file for file downloading
+		newFile := MakeNewFile(fileName)
+
+		//receive file upload from client
+		DownloadFileChunks(conn, newFile, maxFileBufferSize)
+
+		fmt.Println("Download complete.")
+	*/
+}
+
+// memory efficient file downloading using chunks of file data
+// used when client wants to download a file
+func DownloadFileChunks(conn net.Conn, newFile *os.File, fileBufferSize int64) {
+	fileTransferIncomplete := true
+
+	for fileTransferIncomplete {
+		//empty buffer of a given size
+		fileBuffer := make([]byte, fileBufferSize)
+
+		//receive file chunk data
+		length, err := conn.Read(fileBuffer)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
-		fmt.Println("Downloaded file successfully.")
-		fmt.Println("Exiting server...")
-		time.Sleep(time.Second)
-		conn.Close()
+
+		//show client progress of download
+		fmt.Printf("Downloaded %d bytes\n", length)
+
+		/*
+		* check if the last 22 bytes (converted to characters)
+		* make up the a message from the server to notify
+		* the last n bytes were sent to stop downloading
+		* and end the for loop
+		 */
+		if string(fileBuffer[:length][length-22:]) == "Finished sending file." {
+			fileTransferIncomplete = true
+
+			/*
+			* write final received data to file
+			* except the last 22 bytes (message from server)
+			*
+			 */
+			_, err = newFile.Write(fileBuffer[:length-22])
+			if err != nil {
+				fmt.Println("Write error:", err)
+			}
+			break
+		} else {
+			//write the next received n bytes to file
+			_, err = newFile.Write(fileBuffer[:length])
+			if err != nil {
+				fmt.Println("Write error:", err)
+			}
+		}
 	}
 }
 
@@ -107,9 +177,6 @@ func UploadFile(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
 
-	//show client the file upload limit from config.json (file buffer limit)
-	fmt.Printf("File upload limit: %s\n", ShowFileSize(fileBufferLimit))
-
 	//read file name
 	var fileName string
 	fileNameReader := bufio.NewReader(os.Stdin)
@@ -119,46 +186,71 @@ func UploadFile(command string, conn net.Conn) {
 	//remove two newline characters
 	fileName = string(fileName[:len(fileName)-2])
 
-	//try to open (local) file
-	data, err := os.ReadFile(fileName)
+	//send name of file to server
+	conn.Write([]byte(fileName))
+
+	//get bufio reader to read file in chunks
+	file, reader, err := GetFileReader(fileName)
+
+	//if file doesn't exist on clientside, notify them
 	if err != nil {
-		//close connection if local file can't be read
-		fmt.Println(err)
-		fmt.Println("Exiting server...")
-		time.Sleep(time.Second)
-		conn.Close()
+		fmt.Printf("Couldn't read the file: %s\n", fileName)
+		conn.Write([]byte("Can't read given file."))
 	} else {
-		//check if the chosen file is wihin the file upload limit
-		if int64(len(data)) > fileBufferLimit {
-			fmt.Printf("This file is too large: %s", ShowFileSize(int64(len(data))))
-			fmt.Println("Exiting server...")
-			time.Sleep(time.Second)
-			conn.Close()
-		} else {
-			//send name of file to server
-			conn.Write([]byte(fileName))
+		//tell server the client found a file
+		conn.Write([]byte("This file exists."))
 
-			/*
-			* give the server some time to read file data
-			* after receiving file name
-			 */
-			time.Sleep(time.Millisecond)
+		//close file at the end
+		defer file.Close()
 
-			//send file data to server
-			conn.Write(data)
+		//otherwise send file to server if it exists
+		SendFileChunks(conn, reader, maxFileBufferSize)
+		fmt.Println("Finished uploading file.")
+	}
+}
 
-			//receive message from server (255 characters)
-			messageLimit := 255
-			messageBuffer := make([]byte, messageLimit)
-			length, err := conn.Read(messageBuffer)
-			if err != nil {
-				fmt.Println(err)
+// memory efficient file transferring using chunks of file data
+func SendFileChunks(conn net.Conn, reader *bufio.Reader, fileBufferSize int64) {
+	for {
+		//empty buffer of a given size
+		fileBuffer := make([]byte, fileBufferSize)
+		//read every x bytes (based on fileBufferSize) into buffer until EOF
+		n, err := reader.Read(fileBuffer)
+
+		//check for errors when reading buffer
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
 			}
-			message := string(messageBuffer[:length])
-			fmt.Println("Message from server:", message)
-			fmt.Println("Exiting server...")
-			time.Sleep(time.Second)
-			conn.Close()
+			fmt.Println("Read error:", err)
+		}
+
+		//show client progress of file upload
+		fmt.Printf("Uploaded %d bytes\n", n)
+
+		//check for EOF (end of file)
+		if err == nil && int64(n) < fileBufferSize {
+			/*
+			* send the final n bytes and a simple
+			* message to notify the client
+			* that all the bytes were sent
+			 */
+			finalBytes := string(fileBuffer[:n])
+			msg := "Finished sending file."
+			finalData := []byte(finalBytes + msg)
+
+			//send the final n bytes
+			_, err := conn.Write(finalData)
+			if err != nil {
+				fmt.Println("Write error:", err)
+			}
+			break
+		} else {
+			//send n bytes to client
+			_, err := conn.Write(fileBuffer[:n])
+			if err != nil {
+				fmt.Println("Write error:", err)
+			}
 		}
 	}
 }
@@ -243,7 +335,7 @@ func main() {
 	}
 
 	//set file buffer limit
-	fileBufferLimit = server.FileBufferLimit
+	maxFileBufferSize = server.MaxFileBufferSize
 
 	//read ip address and port
 	serverAddress := server.IP_Address + ":" + server.Port
@@ -258,5 +350,8 @@ func main() {
 	} else {
 		//only connect if ip and port are valid
 		ConnectToServer(conn)
+		fmt.Println("Leaving server in 2 seconds...")
+		time.Sleep(time.Second * 2)
+		conn.Close()
 	}
 }
