@@ -83,27 +83,16 @@ func ViewFiles(command string, conn net.Conn) {
 		fmt.Println(err)
 	}
 
-	//message from client to see if they can send a file
-	clientMessage := string(serverMessageBuffer[:length])
+	//message from server to see if they can send a file
+	serverMessage := string(serverMessageBuffer[:length])
 
-	if clientMessage == "Can't read given file." {
+	if serverMessage == "Can't read given file." {
 		fmt.Printf("Couldn't open the file: %s", fileName)
 	} else {
-		//receive file upload from client
+		//download file from server
 		DownloadFileChunks(conn, newFile, maxFileBufferSize)
 		fmt.Println("Received file upload from client.")
 	}
-
-	/*
-
-		//make new file for file downloading
-		newFile := MakeNewFile(fileName)
-
-		//receive file upload from client
-		DownloadFileChunks(conn, newFile, maxFileBufferSize)
-
-		fmt.Println("Download complete.")
-	*/
 }
 
 // memory efficient file downloading using chunks of file data
@@ -186,7 +175,7 @@ func UploadFile(command string, conn net.Conn) {
 	//remove two newline characters
 	fileName = string(fileName[:len(fileName)-2])
 
-	//send name of file to server
+	//send name of file to server to download
 	conn.Write([]byte(fileName))
 
 	//get bufio reader to read file in chunks

@@ -49,6 +49,7 @@ func MakeNewFile(fileName string) *os.File {
 func GetFileSize(fileName string) string {
 	//read file
 	file, err := os.Open(fileStorageDirectory + fileName)
+
 	//close file at the end of current file goroutine
 	defer file.Close()
 
@@ -145,16 +146,8 @@ func SendFileData(conn net.Conn) {
 
 		//otherwise send file to server if it exists
 		SendFileChunks(conn, reader, maxFileBufferSize)
-		fmt.Println("Finished uploading file.")
+		fmt.Println("Finished sending file to client.")
 	}
-
-	/*
-		//close file at the end
-		defer file.Close()
-
-		//send file to client
-		SendFileChunks(conn, reader, maxFileBufferSize)
-	*/
 }
 
 // memory efficient file transferring using chunks of file data
