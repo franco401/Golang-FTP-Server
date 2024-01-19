@@ -68,27 +68,28 @@ func ViewFiles(command string, conn net.Conn) {
 	//send file name to server to download
 	conn.Write([]byte(fileName))
 
-	//make new file for file downloading
-	newFile := MakeNewFile(fileName)
-
-	//close file at the end
-	defer newFile.Close()
-
 	//buffer for server msg to see if they can send a file
 	serverMessageBuffer := make([]byte, 255)
 
-	//see if the client found a file
+	//see if the server found the file
 	length, err = conn.Read(serverMessageBuffer)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	//message from server to see if they can send a file
+	//message from server to see if they can send the given file
 	serverMessage := string(serverMessageBuffer[:length])
 
+	//check if the server was able to read the given file
 	if serverMessage == "Can't read given file." {
-		fmt.Printf("Couldn't open the file: %s", fileName)
+		fmt.Printf("Server couldn't read or find the file: %s\n", fileName)
 	} else {
+		//make new file for file downloading
+		newFile := MakeNewFile(fileName)
+
+		//close file at the end
+		defer newFile.Close()
+
 		//download file from server
 		DownloadFileChunks(conn, newFile, maxFileBufferSize)
 		fmt.Println("Received file upload from client.")

@@ -135,7 +135,6 @@ func SendFileData(conn net.Conn) {
 
 	//if file doesn't exist on serverise, notify client
 	if err != nil {
-		fmt.Printf("Couldn't read the file: %s\n", fileName)
 		conn.Write([]byte("Can't read given file."))
 	} else {
 		//tell client the server found a file
@@ -210,12 +209,6 @@ func ReceiveFileData(conn net.Conn) {
 	//read file name client wants to upload
 	fileName := string(fileNameBuffer[:length])
 
-	//prepare new file (to receive file upload)
-	newFile := MakeNewFile(fileStorageDirectory + fileName)
-
-	//close file at the end
-	defer newFile.Close()
-
 	//buffer for client msg to see if they can send a file
 	clientMessageBuffer := make([]byte, 255)
 
@@ -228,9 +221,14 @@ func ReceiveFileData(conn net.Conn) {
 	//message from client to see if they can send a file
 	clientMessage := string(clientMessageBuffer[:length])
 
-	if clientMessage == "Can't read given file." {
-		fmt.Printf("Couldn't open the file: %s\n", fileName)
-	} else {
+	//check if the client was able to read a file to upload here
+	if !(clientMessage == "Can't read given file.") {
+		//prepare new file (to receive file upload)
+		newFile := MakeNewFile(fileStorageDirectory + fileName)
+
+		//close file at the end
+		defer newFile.Close()
+
 		//receive file upload from client
 		DownloadFileChunks(conn, newFile, maxFileBufferSize)
 		fmt.Println("Received file upload from client.")
