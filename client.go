@@ -8,18 +8,17 @@ import (
 	"net"
 	"os"
 	"time"
-	"units"
 )
 
 // create json struct
 type serverConfig struct {
 	IP_Address        string `json:"ip_address"`
 	Port              string `json:"port"`
-	MaxFileBufferSize int64  `json:"max_file_buffer_size"`
+	MaxFileBufferSize uint64 `json:"max_file_buffer_size"`
 }
 
 // max file buffer size to receive or upload
-var maxFileBufferSize int64
+var maxFileBufferSize uint64
 
 // used to prepare a file to send to server
 func GetFileReader(fileName string) (*os.File, *bufio.Reader, error) {
@@ -45,8 +44,8 @@ func ViewFiles(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
 
-	//receive file names from server (10 KB limit)
-	fileNamesBuffer := make([]byte, units.KB*10)
+	//receive file names from server
+	fileNamesBuffer := make([]byte, maxFileBufferSize)
 	length, err := conn.Read(fileNamesBuffer)
 	if err != nil {
 		log.Fatal(err)
@@ -91,19 +90,19 @@ func ViewFiles(command string, conn net.Conn) {
 		defer newFile.Close()
 
 		//download file from server
-		DownloadFileChunks(conn, newFile, maxFileBufferSize)
+		DownloadFileChunks(conn, newFile)
 		fmt.Println("Received file upload from client.")
 	}
 }
 
 // memory efficient file downloading using chunks of file data
 // used when client wants to download a file
-func DownloadFileChunks(conn net.Conn, newFile *os.File, fileBufferSize int64) {
+func DownloadFileChunks(conn net.Conn, newFile *os.File) {
 	fileTransferIncomplete := true
 
 	for fileTransferIncomplete {
 		//empty buffer of a given size
-		fileBuffer := make([]byte, fileBufferSize)
+		fileBuffer := make([]byte, maxFileBufferSize)
 
 		//receive file chunk data
 		length, err := conn.Read(fileBuffer)
@@ -143,7 +142,7 @@ func DownloadFileChunks(conn net.Conn, newFile *os.File, fileBufferSize int64) {
 	}
 }
 
-func ShowFileSize(fileSize int64) string {
+func ShowFileSize(fileSize uint64) string {
 	fileSizes := []string{"B", "KB", "MB", "GB"}
 	var fileSizeIndex int8
 
@@ -194,16 +193,16 @@ func UploadFile(command string, conn net.Conn) {
 		defer file.Close()
 
 		//otherwise send file to server if it exists
-		SendFileChunks(conn, reader, maxFileBufferSize)
+		SendFileChunks(conn, reader)
 		fmt.Println("Finished uploading file.")
 	}
 }
 
 // memory efficient file transferring using chunks of file data
-func SendFileChunks(conn net.Conn, reader *bufio.Reader, fileBufferSize int64) {
+func SendFileChunks(conn net.Conn, reader *bufio.Reader) {
 	for {
 		//empty buffer of a given size
-		fileBuffer := make([]byte, fileBufferSize)
+		fileBuffer := make([]byte, maxFileBufferSize)
 		//read every x bytes (based on fileBufferSize) into buffer until EOF
 		n, err := reader.Read(fileBuffer)
 
@@ -219,7 +218,7 @@ func SendFileChunks(conn net.Conn, reader *bufio.Reader, fileBufferSize int64) {
 		fmt.Printf("Uploaded %d bytes\n", n)
 
 		//check for EOF (end of file)
-		if err == nil && int64(n) < fileBufferSize {
+		if err == nil && uint64(n) < maxFileBufferSize {
 			/*
 			* send the final n bytes and a simple
 			* message to notify the client
@@ -327,21 +326,26 @@ func main() {
 	//set file buffer limit
 	maxFileBufferSize = server.MaxFileBufferSize
 
-	//read ip address and port
-	serverAddress := server.IP_Address + ":" + server.Port
-
-	//attempt to connect to tcp server
-	conn, err := net.Dial("tcp", serverAddress)
-	if err != nil {
-		fmt.Println("Couldn't connect to address:", serverAddress)
-		fmt.Println("Exiting server...")
+	if maxFileBufferSize < 1024 {
+		fmt.Printf("max_file_buffer_size of %d bytes is too small.\n", maxFileBufferSize)
+		fmt.Println("Closing server...")
 		time.Sleep(time.Second)
-		conn.Close()
 	} else {
-		//only connect if ip and port are valid
-		ConnectToServer(conn)
-		fmt.Println("Leaving server in 2 seconds...")
-		time.Sleep(time.Second * 2)
-		conn.Close()
+		//read ip address and port
+		serverAddress := server.IP_Address + ":" + server.Port
+
+		//attempt to connect to tcp server
+		conn, err := net.Dial("tcp", serverAddress)
+		if err != nil {
+			fmt.Println("Couldn't connect to address:", serverAddress)
+			fmt.Println("Exiting server...")
+			time.Sleep(time.Second)
+		} else {
+			//only connect if ip and port are valid
+			ConnectToServer(conn)
+			fmt.Println("Leaving server in 2 seconds...")
+			time.Sleep(time.Second * 2)
+			conn.Close()
+		}
 	}
 }

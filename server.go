@@ -13,12 +13,12 @@ import (
 type serverConfig struct {
 	IP_Address           string `json:"ip_address"`
 	Port                 string `json:"port"`
-	MaxFileBufferSize    int64  `json:"max_file_buffer_size"`
+	MaxFileBufferSize    uint64 `json:"max_file_buffer_size"`
 	FileStorageDirectory string `json:"file_storage_directory"`
 }
 
 // max file buffer size to receive or upload
-var maxFileBufferSize int64
+var maxFileBufferSize uint64
 
 // location of where files are stored and read from for server
 var fileStorageDirectory string
@@ -144,18 +144,18 @@ func SendFileData(conn net.Conn) {
 		defer file.Close()
 
 		//otherwise send file to server if it exists
-		SendFileChunks(conn, reader, maxFileBufferSize)
+		SendFileChunks(conn, reader)
 		fmt.Println("Finished sending file to client.")
 	}
 }
 
 // memory efficient file transferring using chunks of file data
 // used when client wants to download a file
-func SendFileChunks(conn net.Conn, reader *bufio.Reader, fileBufferSize int64) {
+func SendFileChunks(conn net.Conn, reader *bufio.Reader) {
 	for {
 		//empty buffer of a given size
-		fileBuffer := make([]byte, fileBufferSize)
-		//read every x bytes (based on fileBufferSize) into buffer until EOF
+		fileBuffer := make([]byte, maxFileBufferSize)
+		//read every x bytes (based on maxFileBufferSize) into buffer until EOF
 		n, err := reader.Read(fileBuffer)
 
 		//check for errors when reading buffer
@@ -167,7 +167,7 @@ func SendFileChunks(conn net.Conn, reader *bufio.Reader, fileBufferSize int64) {
 		}
 
 		//check for EOF (end of file)
-		if err == nil && int64(n) < fileBufferSize {
+		if err == nil && uint64(n) < maxFileBufferSize {
 			/*
 			* send the final n bytes and a simple
 			* message to notify the client
@@ -230,19 +230,19 @@ func ReceiveFileData(conn net.Conn) {
 		defer newFile.Close()
 
 		//receive file upload from client
-		DownloadFileChunks(conn, newFile, maxFileBufferSize)
+		DownloadFileChunks(conn, newFile)
 		fmt.Println("Received file upload from client.")
 	}
 }
 
 // memory efficient file downloading using chunks of file data
 // used when client wants to upload a file to here
-func DownloadFileChunks(conn net.Conn, newFile *os.File, fileBufferSize int64) {
+func DownloadFileChunks(conn net.Conn, newFile *os.File) {
 	fileTransferIncomplete := true
 
 	for fileTransferIncomplete {
 		//empty buffer of a given size
-		fileBuffer := make([]byte, fileBufferSize)
+		fileBuffer := make([]byte, maxFileBufferSize)
 
 		//receive file chunk data
 		length, err := conn.Read(fileBuffer)
@@ -341,31 +341,37 @@ func main() {
 	//set file buffer limit
 	maxFileBufferSize = server.MaxFileBufferSize
 
-	//set server file storage directory
-	fileStorageDirectory = server.FileStorageDirectory
-
-	//read ip address and port
-	serverAddress := server.IP_Address + ":" + server.Port
-
-	//run server from server config and start tcp server
-	listener, err := net.Listen("tcp", serverAddress)
-	if err != nil {
-		fmt.Println(err)
+	if maxFileBufferSize < 1024 {
+		fmt.Printf("max_file_buffer_size of %d bytes is too small.\n", maxFileBufferSize)
 		fmt.Println("Closing server...")
 		time.Sleep(time.Second)
-	}
+	} else {
+		//set server file storage directory
+		fileStorageDirectory = server.FileStorageDirectory
 
-	fmt.Printf("Server running on: %s\n", serverAddress)
+		//read ip address and port
+		serverAddress := server.IP_Address + ":" + server.Port
 
-	//accept client connections
-	for {
-		conn, err := listener.Accept()
+		//run server from server config and start tcp server
+		listener, err := net.Listen("tcp", serverAddress)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println("Closing server...")
 			time.Sleep(time.Second)
+		} else {
+			fmt.Printf("Server running on: %s\n", serverAddress)
+
+			//accept client connections
+			for {
+				conn, err := listener.Accept()
+				if err != nil {
+					fmt.Println(err)
+					fmt.Println("Closing server...")
+					time.Sleep(time.Second)
+				}
+				//goroutine to handle incoming client connections
+				go HandleConnection(conn)
+			}
 		}
-		//goroutine to handle incoming client connections
-		go HandleConnection(conn)
 	}
 }
