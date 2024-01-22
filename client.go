@@ -44,16 +44,19 @@ func ViewFiles(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
 
-	//receive file names from server
-	fileNamesBuffer := make([]byte, maxFileBufferSize)
-	length, err := conn.Read(fileNamesBuffer)
+	//receive file names and sizes from server
+	fileNamesAndSizesBuffer := make([]byte, 1048576)
+	length, err := conn.Read(fileNamesAndSizesBuffer)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//get file names from server
-	files := string(fileNamesBuffer[:length])
-	fmt.Println("Files on server:\n\n" + files)
+	fileNamesAndSizes := string(fileNamesAndSizesBuffer[:length])
+	fmt.Println("Files on server:\n\n" + fileNamesAndSizes)
+
+	//title for showing file names and their sizes
+	fmt.Printf("File Name | File Size\n---------------------\n")
 
 	//read name of file to download
 	var fileName string
@@ -110,9 +113,6 @@ func DownloadFileChunks(conn net.Conn, newFile *os.File) {
 			fmt.Println(err)
 		}
 
-		//show client progress of download
-		fmt.Printf("Downloaded %d bytes\n", length)
-
 		/*
 		* check if the last 22 bytes (converted to characters)
 		* make up the a message from the server to notify
@@ -121,6 +121,14 @@ func DownloadFileChunks(conn net.Conn, newFile *os.File) {
 		 */
 		if string(fileBuffer[:length][length-22:]) == "Finished sending file." {
 			fileTransferIncomplete = true
+
+			/*
+			* show client the last bytes downloaded
+			* length-22 is used because the server
+			* sends 22 extra bytes to tell the client
+			* the file download is complete
+			 */
+			fmt.Printf("Downloaded %d bytes\n", length-22)
 
 			/*
 			* write final received data to file
@@ -133,6 +141,9 @@ func DownloadFileChunks(conn net.Conn, newFile *os.File) {
 			}
 			break
 		} else {
+			//show client current amount of bytes downloaded
+			fmt.Printf("Downloaded %d bytes\n", length)
+
 			//write the next received n bytes to file
 			_, err = newFile.Write(fileBuffer[:length])
 			if err != nil {
@@ -321,16 +332,12 @@ func main() {
 	err = json.Unmarshal(data, &server)
 	if err != nil {
 		fmt.Println(err)
-	}
-
-	//set file buffer limit
-	maxFileBufferSize = server.MaxFileBufferSize
-
-	if maxFileBufferSize < 1024 {
-		fmt.Printf("max_file_buffer_size of %d bytes is too small.\n", maxFileBufferSize)
-		fmt.Println("Closing server...")
+		fmt.Println("Closing client...")
 		time.Sleep(time.Second)
 	} else {
+		//set file buffer limit
+		maxFileBufferSize = server.MaxFileBufferSize
+
 		//read ip address and port
 		serverAddress := server.IP_Address + ":" + server.Port
 
@@ -343,8 +350,8 @@ func main() {
 		} else {
 			//only connect if ip and port are valid
 			ConnectToServer(conn)
-			fmt.Println("Leaving server in 2 seconds...")
-			time.Sleep(time.Second * 2)
+			fmt.Println("Leaving server in 3 seconds...")
+			time.Sleep(time.Second * 3)
 			conn.Close()
 		}
 	}

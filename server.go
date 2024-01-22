@@ -93,23 +93,16 @@ func PrepareFileData() string {
 		fmt.Println(err)
 	}
 
-	//shows client info for the files on the server
-	fileData := "File Name | File Size\n---------------------\n"
+	fileNamesAndSizes := ""
 
-	/*
-	* loop through each file in the directory
-	* and append their names to the file names variable
-	 */
-
-	for _, file := range files {
+	for i := 0; i < len(files); i++ {
 		//only get data for files, not directories
-		if !file.Type().IsDir() {
-			fileName := file.Name()
-			fileSize := GetFileSize(fileName)
-			fileData += fmt.Sprintln(fileName, "|", fileSize)
+		if !files[i].Type().IsDir() {
+			//string formatted as: [filename] | [filesize]
+			fileNamesAndSizes += fmt.Sprint(files[i].Name(), " | ", GetFileSize(files[i].Name()))
 		}
 	}
-	return fileData
+	return fileNamesAndSizes
 }
 
 // reads a given file name and sends it to client
@@ -336,16 +329,10 @@ func main() {
 		fmt.Println(err)
 		fmt.Println("Closing server...")
 		time.Sleep(time.Second)
-	}
-
-	//set file buffer limit
-	maxFileBufferSize = server.MaxFileBufferSize
-
-	if maxFileBufferSize < 1024 {
-		fmt.Printf("max_file_buffer_size of %d bytes is too small.\n", maxFileBufferSize)
-		fmt.Println("Closing server...")
-		time.Sleep(time.Second)
 	} else {
+		//set file buffer limit
+		maxFileBufferSize = server.MaxFileBufferSize
+
 		//set server file storage directory
 		fileStorageDirectory = server.FileStorageDirectory
 
