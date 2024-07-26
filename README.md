@@ -10,9 +10,9 @@ An FTP client/server project written in Golang using the standard library only, 
 
 ## Installation Guide
 
-1. Download the source code
-
-2. Build the client and server
+1. Install Go compiler from here: https://go.dev/doc/install
+2. Download the source code
+3. Build the client and server using the following compiler commands:
 
 ```
 go build client.go
