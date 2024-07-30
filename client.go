@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -64,8 +65,13 @@ func ViewFiles(command string, conn net.Conn) {
 	fmt.Print("Pick a file to download: ")
 	fileName, _ = fileNameReader.ReadString('\n')
 
-	//remove two newline characters
-	fileName = string(fileName[:len(fileName)-2])
+	if runtime.GOOS == "windows" {
+		//remove two newline characters for windows
+		fileName = string(fileName[:len(fileName)-2])
+	} else {
+		//remove one newline character otherwise
+		fileName = string(fileName[:len(fileName)-1])
+	}
 
 	//send file name to server to download
 	conn.Write([]byte(fileName))
@@ -183,8 +189,13 @@ func UploadFile(command string, conn net.Conn) {
 	fmt.Print("Enter name of file in this folder to upload: ")
 	fileName, _ = fileNameReader.ReadString('\n')
 
-	//remove two newline characters
-	fileName = string(fileName[:len(fileName)-2])
+	if runtime.GOOS == "windows" {
+		//remove two newline characters for windows
+		fileName = string(fileName[:len(fileName)-2])
+	} else {
+		//remove one newline character otherwise
+		fileName = string(fileName[:len(fileName)-1])
+	}
 
 	//send name of file to server to download
 	conn.Write([]byte(fileName))
@@ -274,8 +285,13 @@ func CommandSelection() string {
 		fmt.Print("Select command: ")
 		command, _ = commandReader.ReadString('\n')
 
-		//remove two newline characters
-		command = string(command[:len(command)-2])
+		if runtime.GOOS == "windows" {
+			//remove two newline characters for windows
+			command = string(command[:len(command)-2])
+		} else {
+			//remove one newline character otherwise
+			command = string(command[:len(command)-1])
+		}
 
 		if commands[command] != 1 {
 			fmt.Printf("'%s' is not a valid command.\n\n", command)

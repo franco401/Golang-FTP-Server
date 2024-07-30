@@ -123,6 +123,16 @@ func SendFileData(conn net.Conn) {
 	}
 	fileName := string(fileNameBuffer[:length])
 
+	/*
+	* check if the received filename is empty
+	* to avoid trying to open a directory instead
+	* of a file resulting in an endless broken pipe error
+	 */
+	if len(fileName) == 0 {
+		conn.Write([]byte("Can't read empty file"))
+		return
+	}
+
 	//get bufio reader to read file in chunks
 	file, reader, err := GetFileReader(fileName)
 
@@ -335,6 +345,20 @@ func main() {
 
 		//set server file storage directory
 		fileStorageDirectory = server.FileStorageDirectory
+
+		//check if the file storage directory set in config.json exists
+		files, err := os.ReadDir(fileStorageDirectory)
+		if err != nil {
+			fmt.Println("Read directory error:", err)
+			fmt.Println("Please make sure you have a directory with the same name as the file_storage_directory parameter in config.json")
+			return
+		}
+
+		//check if file storage directory set in config.json is empty
+		if len(files) == 0 {
+			fmt.Printf("%s needs to have at least 1 file\n", fileStorageDirectory)
+			return
+		}
 
 		//read ip address and port
 		serverAddress := server.IP_Address + ":" + server.Port
