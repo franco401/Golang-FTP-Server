@@ -87,7 +87,7 @@ func GetFileSize(fileName string) string {
 
 // returns the name and size of all files on server to client
 func PrepareFileData() string {
-	//read files from this directory
+	//read files from same directory as file storage directory set in config.json
 	files, err := os.ReadDir(fileStorageDirectory)
 	if err != nil {
 		fmt.Println(err)

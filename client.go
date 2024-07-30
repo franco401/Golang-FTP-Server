@@ -56,9 +56,6 @@ func ViewFiles(command string, conn net.Conn) {
 	fileNamesAndSizes := string(fileNamesAndSizesBuffer[:length])
 	fmt.Println("Files on server:\n\n" + fileNamesAndSizes)
 
-	//title for showing file names and their sizes
-	fmt.Printf("File Name | File Size\n---------------------\n")
-
 	//read name of file to download
 	var fileName string
 	fileNameReader := bufio.NewReader(os.Stdin)
@@ -178,10 +175,74 @@ func ShowFileSize(fileSize uint64) string {
 	return fmt.Sprintln(fileSize, fileSizes[fileSizeIndex])
 }
 
+// returns a message showing the size of a file
+func GetFileSize(fileName string) string {
+	//read file
+	file, err := os.Open(fileName)
+
+	//close file at the end of current file goroutine
+	defer file.Close()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	f, err := file.Stat()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//file size in bytes
+	fs := f.Size()
+	var fileSize float64 = float64(fs)
+
+	fileSizes := []string{"B", "KB", "MB", "GB"}
+	var fileSizeIndex int8
+
+	/*
+	* while the filesize in bytes
+	* is bigger than 1024, continously
+	* divide by 1024 and increment the
+	* filesizeIndex to finally return
+	* the appropriate file size for the
+	* client, such as 1 KB for 1024 bytes
+	 */
+	for fileSize >= 1024.0 {
+		fileSizeIndex++
+		fileSize /= 1024.0
+	}
+	return fmt.Sprintln(fileSize, fileSizes[fileSizeIndex])
+}
+
+// returns the name and size of all files on same directory as client
+func PrepareFileData() string {
+	//read files from same directory as client
+	files, err := os.ReadDir(".")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fileNamesAndSizes := ""
+
+	for i := 0; i < len(files); i++ {
+		//only get data for files, not directories
+		if !files[i].Type().IsDir() {
+			//string formatted as: [filename] | [filesize]
+			fileNamesAndSizes += fmt.Sprint(files[i].Name(), " | ", GetFileSize(files[i].Name()))
+		}
+	}
+	return fileNamesAndSizes
+}
+
 // called when client picks upload file command
 func UploadFile(command string, conn net.Conn) {
 	//send command to server
 	conn.Write([]byte(command))
+
+	//show list of files in directory first
+	clientSideFiles := PrepareFileData()
+	fmt.Println("Pick a file to upload:\n\n" + clientSideFiles)
 
 	//read file name
 	var fileName string
@@ -208,9 +269,6 @@ func UploadFile(command string, conn net.Conn) {
 		fmt.Printf("Couldn't read the file: %s\n", fileName)
 		conn.Write([]byte("Can't read given file."))
 	} else {
-		//tell server the client found a file
-		conn.Write([]byte("This file exists."))
-
 		//close file at the end
 		defer file.Close()
 
