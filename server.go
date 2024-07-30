@@ -351,12 +351,18 @@ func main() {
 		if err != nil {
 			fmt.Println("Read directory error:", err)
 			fmt.Println("Please make sure you have a directory with the same name as the file_storage_directory parameter in config.json")
+
+			//give user time to read error message
+			time.Sleep(time.Second * 10)
 			return
 		}
 
 		//check if file storage directory set in config.json is empty
 		if len(files) == 0 {
 			fmt.Printf("%s needs to have at least 1 file\n", fileStorageDirectory)
+
+			//give user time to read error message
+			time.Sleep(time.Second * 5)
 			return
 		}
 
