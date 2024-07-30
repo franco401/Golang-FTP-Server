@@ -129,7 +129,6 @@ func SendFileData(conn net.Conn) {
 	* of a file resulting in an endless broken pipe error
 	 */
 	if len(fileName) == 0 {
-		conn.Write([]byte("Can't read empty file"))
 		return
 	}
 
@@ -211,6 +210,15 @@ func ReceiveFileData(conn net.Conn) {
 
 	//read file name client wants to upload
 	fileName := string(fileNameBuffer[:length])
+
+	/*
+	* check if the received filename is empty
+	* to avoid trying to make a directory instead
+	* of a file resulting in a server crash
+	 */
+	if len(fileName) == 0 {
+		return
+	}
 
 	//buffer for client msg to see if they can send a file
 	clientMessageBuffer := make([]byte, 255)
