@@ -1,4 +1,4 @@
-# GolangFTPServer
+# Golang FTP Server
 
 An FTP client/server project written in Golang using the standard library only, no third party library were used here. Contains both the server and client programs. The client program can upload files to the server program and download files from it. Use config.json to setup the ip address and port the server can host at, the max file buffer size limit and the server's file storage directory.
 
